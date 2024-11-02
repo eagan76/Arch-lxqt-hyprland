@@ -16,13 +16,17 @@ if ! grep -q "^\[multilib\]" /etc/pacman.conf; then
     sudo pacman -Syu --noconfirm
 fi
 
+# Remove potentially conflicting packages if they exist
+echo "Removing conflicting packages (mesa, lib32-mesa) if necessary..."
+sudo pacman -Rns --noconfirm mesa lib32-mesa 2>/dev/null || echo "No conflicting mesa packages found."
+
 # Install necessary packages
-echo "Installing Wayland, LXQt, Hyprland, SDDM, Kitty, PipeWire, PulseAudio, xdg-desktop-portal, curl, ImageMagick, Steam, Discord, Fastfetch, Btop, and Vulkan dependencies..."
+echo "Installing Wayland, LXQt, Hyprland, SDDM, Kitty, PipeWire, PulseAudio, xdg-desktop-portal, curl, ImageMagick, Steam, Discord, Fastfetch, Btop, and Intel Vulkan dependencies..."
 sudo pacman -S --noconfirm wayland wayland-protocols lxqt hyprland sddm kitty pipewire pipewire-alsa pipewire-pulse \
     xdg-desktop-portal xdg-desktop-portal-wlr pulseaudio pavucontrol curl imagemagick steam discord fastfetch btop \
     vulkan-intel lib32-vulkan-intel
 
-# Check for SDDM installation and re-enable service if necessary
+# Check for SDDM installation and enable service if necessary
 echo "Enabling and starting SDDM as the default display manager..."
 if ! systemctl list-unit-files | grep -q sddm.service; then
     echo "SDDM service not found. Please check the installation of SDDM."

@@ -9,17 +9,18 @@ command_exists() {
 echo "Updating system packages..."
 sudo pacman -Syu --noconfirm
 
-# Enable multilib repository if it's not already enabled (required for Steam)
+# Enable multilib repository if it's not already enabled (required for Steam and 32-bit Vulkan libraries)
 if ! grep -q "^\[multilib\]" /etc/pacman.conf; then
-    echo "Enabling multilib repository for Steam..."
+    echo "Enabling multilib repository for Steam and Vulkan libraries..."
     sudo sed -i '/#\[multilib\]/,\#$/{s/^#//}' /etc/pacman.conf
     sudo pacman -Syu --noconfirm
 fi
 
 # Install necessary packages
-echo "Installing Wayland, LXQt, Hyprland, SDDM, Kitty, PipeWire, PulseAudio, xdg-desktop-portal, curl, ImageMagick, Steam, Discord, Fastfetch, and Btop..."
+echo "Installing Wayland, LXQt, Hyprland, SDDM, Kitty, PipeWire, PulseAudio, xdg-desktop-portal, curl, ImageMagick, Steam, Discord, Fastfetch, Btop, and Vulkan dependencies..."
 sudo pacman -S --noconfirm wayland wayland-protocols lxqt hyprland sddm kitty pipewire pipewire-alsa pipewire-pulse \
-    xdg-desktop-portal xdg-desktop-portal-wlr pulseaudio pavucontrol curl imagemagick steam discord fastfetch btop
+    xdg-desktop-portal xdg-desktop-portal-wlr pulseaudio pavucontrol curl imagemagick steam discord fastfetch btop \
+    vulkan-intel lib32-vulkan-intel
 
 # Check for SDDM installation and re-enable service if necessary
 echo "Enabling and starting SDDM as the default display manager..."
@@ -149,4 +150,4 @@ echo "Restarting SDDM to apply changes..."
 sudo systemctl restart sddm
 
 echo "SDDM and LXQt theme setup complete."
-echo "Steam, Discord, Fastfetch, and Btop installed successfully."
+echo "Steam, Discord, Fastfetch, Btop, and Intel Vulkan dependencies installed successfully."

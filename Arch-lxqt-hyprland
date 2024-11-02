@@ -17,10 +17,9 @@ if ! grep -q "^\[multilib\]" /etc/pacman.conf; then
 fi
 
 # Install necessary packages
-echo "Installing Wayland, LXQt, Hyprland, SDDM, Kitty, PipeWire, PulseAudio, xdg-desktop-portal, curl, ImageMagick, and Dancing Script font..."
+echo "Installing Wayland, LXQt, Hyprland, SDDM, Kitty, PipeWire, PulseAudio, xdg-desktop-portal, curl, ImageMagick, Steam, Discord, Fastfetch, and Btop..."
 sudo pacman -S --noconfirm wayland wayland-protocols lxqt hyprland sddm kitty pipewire pipewire-alsa pipewire-pulse \
-    xdg-desktop-portal xdg-desktop-portal-wlr pulseaudio pavucontrol curl imagemagick ttf-dancing-script \
-    steam discord fastfetch btop
+    xdg-desktop-portal xdg-desktop-portal-wlr pulseaudio pavucontrol curl imagemagick steam discord fastfetch btop
 
 # Check for SDDM installation and re-enable service if necessary
 echo "Enabling and starting SDDM as the default display manager..."
@@ -115,26 +114,14 @@ Item {
         text: "Stickman-OS"
         anchors.centerIn: parent
         font.pixelSize: 72
-        font.family: "Dancing Script"
         color: "mediumgrey"
     }
 }
 EOL
 
-# Download Dancing Script font manually if not found in system font path
-FONT_DIR="/usr/share/fonts/TTF"
-echo "Ensuring Dancing Script font is available..."
-if [ ! -f "$FONT_DIR/DancingScript-Regular.ttf" ]; then
-    echo "Downloading Dancing Script font..."
-    sudo mkdir -p "$FONT_DIR"
-    wget -O /tmp/DancingScript-Regular.ttf https://github.com/google/fonts/raw/main/ofl/dancingscript/DancingScript-Regular.ttf
-    sudo mv /tmp/DancingScript-Regular.ttf "$FONT_DIR"
-    sudo fc-cache -f -v
-fi
-
 # Create the background image with gradient and centered text for SDDM
 echo "Generating background image for SDDM..."
-convert -size 1920x1080 gradient:yellow-purple -font "$FONT_DIR/DancingScript-Regular.ttf" -pointsize 120 \
+convert -size 1920x1080 gradient:yellow-purple -pointsize 120 \
     -gravity center -fill mediumgrey -annotate +0+0 'Stickman-OS' "$SDDM_THEME_DIR/background.png"
 
 # Configure SDDM to use the new theme
@@ -146,7 +133,7 @@ LXQT_BACKGROUND_DIR="/usr/share/lxqt/themes/stickman-background"
 sudo mkdir -p "$LXQT_BACKGROUND_DIR"
 
 echo "Generating desktop background with gradient and centered text..."
-convert -size 1920x1080 gradient:yellow-purple -font "$FONT_DIR/DancingScript-Regular.ttf" -pointsize 120 \
+convert -size 1920x1080 gradient:yellow-purple -pointsize 120 \
     -gravity center -fill mediumgrey -annotate +0+0 'Stickman-OS' "$LXQT_BACKGROUND_DIR/default-background.png"
 
 # Set LXQt to use the custom background

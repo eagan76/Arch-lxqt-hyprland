@@ -1,45 +1,61 @@
 #!/bin/bash
 
-# Check for root privileges
-if [[ $EUID -ne 0 ]]; then
-   echo "This script must be run as root."
-   exit 1
-fi
+# Check if a command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
 
-# Update package list and upgrade system
-echo "Updating package list and upgrading system..."
-pacman -Syu --noconfirm
+# Update system
+echo "Updating system packages..."
+sudo pacman -Syu --noconfirm
 
 # Install necessary packages
 echo "Installing Wayland, LXQt, Hyprland, SDDM, Kitty, PipeWire, PulseAudio, xdg-desktop-portal, curl, and ImageMagick..."
-pacman -S --noconfirm wayland wayland-protocols lxqt hyprland sddm kitty pipewire pipewire-alsa pipewire-pulse \
-xdg-desktop-portal xdg-desktop-portal-hyprland pulseaudio pavucontrol curl imagemagick ttf-dancing-script
+sudo pacman -S --noconfirm wayland wayland-protocols lxqt hyprland sddm kitty pipewire pipewire-alsa pipewire-pulse \
+    xdg-desktop-portal xdg-desktop-portal-wlr pulseaudio pavucontrol curl imagemagick ttf-dancing-script
 
-# Enable SDDM as the default display manager
-echo "Enabling SDDM as the default display manager..."
-systemctl enable sddm.service
+# Remove other display managers if installed
+echo "Removing other display managers if they exist..."
+UNWANTED_DISPLAY_MANAGERS=("lightdm" "gdm" "lxdm")
+for dm in "${UNWANTED_DISPLAY_MANAGERS[@]}"; do
+    if pacman -Qs "$dm" >/dev/null; then
+        echo "Uninstalling $dm..."
+        sudo pacman -Rns --noconfirm "$dm"
+    fi
+done
 
-# Create a custom theme directory for SDDM
+# Enable and start SDDM as the default display manager
+echo "Enabling and starting SDDM as the default display manager..."
+sudo systemctl enable sddm
+sudo systemctl start sddm
+
+# Enable and start PipeWire and PulseAudio services
+echo "Enabling and starting PipeWire and PulseAudio services..."
+sudo systemctl enable --now pipewire.service
+sudo systemctl enable --now pipewire-pulse.service
+sudo systemctl enable --now xdg-desktop-portal.service
+sudo systemctl enable --now xdg-desktop-portal-wlr.service
+
+# Set up SDDM custom theme directory
 SDDM_THEME_DIR="/usr/share/sddm/themes/stickman-theme"
-mkdir -p "$SDDM_THEME_DIR"
+sudo mkdir -p "$SDDM_THEME_DIR"
 
-# Set up SDDM theme configuration
-echo "Setting up SDDM theme..."
-cat <<EOL > "$SDDM_THEME_DIR/theme.conf"
+# SDDM Theme Files
+echo "Setting up the SDDM theme..."
+cat <<EOL | sudo tee "$SDDM_THEME_DIR/theme.conf"
 [General]
-background=/usr/share/sddm/themes/stickman-theme/background.jpg
+background=$SDDM_THEME_DIR/background.png
 type=QML
 
 [Greeter]
 position=center
 EOL
 
-# Create the QML layout for SDDM theme
+# Create the QML file for SDDM layout
 echo "Creating QML layout file..."
-cat <<EOL > "$SDDM_THEME_DIR/Main.qml"
+cat <<EOL | sudo tee "$SDDM_THEME_DIR/Main.qml"
 import QtQuick 2.0
 import QtQuick.Controls 2.0
-import org.kde.plasma.core 2.0 as PlasmaCore
 
 Item {
     id: root
@@ -58,7 +74,7 @@ Item {
         anchors.centerIn: parent
         spacing: 20
 
-        PlasmaCore.Label {
+        Text {
             text: "Username:"
             font.pixelSize: 24
             color: "white"
@@ -70,7 +86,7 @@ Item {
             font.pixelSize: 24
         }
 
-        PlasmaCore.Label {
+        Text {
             text: "Password:"
             font.pixelSize: 24
             color: "white"
@@ -104,41 +120,33 @@ Item {
 }
 EOL
 
-# Generate a background image for SDDM
-echo "Generating background image..."
+# Create the background image with gradient and centered text for SDDM
+echo "Generating background image for SDDM..."
 convert -size 1920x1080 gradient:yellow-purple -font Dancing-Script -pointsize 120 \
-    -gravity center -fill mediumgrey -annotate +0+0 'Stickman-OS' "$SDDM_THEME_DIR/background.jpg"
+    -gravity center -fill mediumgrey -annotate +0+0 'Stickman-OS' "$SDDM_THEME_DIR/background.png"
 
-# Set SDDM to use the new theme
+# Configure SDDM to use the new theme
 echo "Configuring SDDM to use the new theme..."
-mkdir -p /etc/sddm.conf.d/
-cat <<EOL > /etc/sddm.conf.d/theme.conf
-[Theme]
-Current=stickman-theme
-EOL
-
-# Create the desktop background with a gradient and centered text
-echo "Generating desktop background with gradient and centered text..."
-BACKGROUND_IMG="/usr/share/lxqt/themes/stickman-background/default-background.png"
-mkdir -p "/usr/share/lxqt/themes/stickman-background"
-convert -size 1920x1080 gradient:yellow-purple -font Dancing-Script -pointsize 120 \
-    -gravity center -fill mediumgrey -annotate +0+0 'Stickman-OS' "$BACKGROUND_IMG"
+sudo sed -i 's/^Current=.*/Current=stickman-theme/' /etc/sddm.conf
 
 # Set LXQt default desktop background
 LXQT_BACKGROUND_DIR="/usr/share/lxqt/themes/stickman-background"
-mkdir -p "$LXQT_BACKGROUND_DIR"
+sudo mkdir -p "$LXQT_BACKGROUND_DIR"
 
+echo "Generating desktop background with gradient and centered text..."
+convert -size 1920x1080 gradient:yellow-purple -font Dancing-Script -pointsize 120 \
+    -gravity center -fill mediumgrey -annotate +0+0 'Stickman-OS' "$LXQT_BACKGROUND_DIR/default-background.png"
+
+# Set LXQt to use the custom background
 echo "Configuring LXQt to use the new background..."
 mkdir -p ~/.config/pcmanfm-qt/lxqt/
-cat <<EOL > ~/.config/pcmanfm-qt/lxqt/settings.conf
+cat <<EOL | tee ~/.config/pcmanfm-qt/lxqt/settings.conf
 [Desktop]
 wallpaper=/usr/share/lxqt/themes/stickman-background/default-background.png
 EOL
 
-# Enable necessary services in systemd
-echo "Enabling necessary services (SDDM, PipeWire, and PulseAudio)..."
-systemctl enable sddm.service
-systemctl enable --user pipewire.service
-systemctl enable --user pipewire-pulse.service
+# Restart SDDM to apply changes
+echo "Restarting SDDM to apply changes..."
+sudo systemctl restart sddm
 
-echo "Installation and setup complete. Reboot your system to apply changes."
+echo "SDDM and LXQt theme setup complete."

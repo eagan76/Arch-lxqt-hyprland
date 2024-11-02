@@ -1,15 +1,11 @@
 #!/bin/bash
 
-# Update package list and install SDDM
+# Update package list and install SDDM if not installed
 echo "Installing SDDM..."
 sudo pacman -Syu --noconfirm sddm
 
-# Check for SDDM installation and enable service if necessary
+# Enable and start SDDM service
 echo "Enabling and starting SDDM as the default display manager..."
-if ! systemctl list-unit-files | grep -q sddm.service; then
-    echo "SDDM service not found. Please check the installation of SDDM."
-    exit 1
-fi
 sudo systemctl enable --now sddm
 
 # Set up SDDM custom theme directory
@@ -95,15 +91,24 @@ Item {
 }
 EOL
 
+# Install ImageMagick if needed for background generation
+echo "Installing ImageMagick to create background image..."
+sudo pacman -S --noconfirm imagemagick
+
 # Create the background image with gradient and centered text for SDDM
 echo "Generating background image for SDDM..."
-sudo pacman -S --noconfirm imagemagick  # Ensure ImageMagick is installed for image creation
 convert -size 1920x1080 gradient:yellow-purple -pointsize 120 \
     -gravity center -fill mediumgrey -annotate +0+0 'Stickman-OS' "$SDDM_THEME_DIR/background.png"
 
-# Configure SDDM to use the new theme
+# Set SDDM to use the custom theme by modifying /etc/sddm.conf
+SDDM_CONF="/etc/sddm.conf"
+if [ ! -f "$SDDM_CONF" ]; then
+    echo "[Theme]" | sudo tee -a "$SDDM_CONF"
+fi
+
+# Ensure the theme setting is correct
 echo "Configuring SDDM to use the new theme..."
-sudo sed -i 's/^Current=.*/Current=stickman-theme/' /etc/sddm.conf
+sudo sed -i '/^\[Theme\]/,/^Current/ {s/^Current=.*/Current=stickman-theme/}' "$SDDM_CONF"
 
 # Restart SDDM to apply changes
 echo "Restarting SDDM to apply changes..."
